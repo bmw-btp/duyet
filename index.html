@@ -10,9 +10,9 @@
     - QR trên bản phối PDF của tổ CẮT (không có tham số o):
         #q=<MÃ QR>&t=<PROFILE MÀU>&r=<id>*<KT>*<SL>*<GHI CHÚ A-B>!...
     - QR trên PHIẾU BÀN GIAO của tổ DẬP / KHOAN / CNC / BÀN GIAO (o = tên tổ, cột 4 = MÃ GIA CÔNG):
-        #q=<MÃ QR>&t=<PROFILE>&o=<TỔ>&r=<id>*<KT>*<SL>*<MÃ GC>!...   (cột: # | MÃ GC | SL | KT | XONG | SL ĐÃ XONG)
+        #q=<MÃ QR>&t=<PROFILE>&o=<TỔ>&r=<id>*<KT>*<SL>*<MÃ GC>!...   (cột: # | MÃ GC | SL | KT | XONG | SL VỪA XONG)
   Dữ liệu bảng nằm sẵn trong link (sau dấu #, không gửi lên máy chủ).
-  NVSX tick XONG 100% hoặc điền SL ĐÃ XONG (TỔNG đã xong tới giờ) -> bấm TIẾP TỤC -> mở Form BÁO CÁO BTP đã điền sẵn:
+  NVSX tick XONG 100% (làm hết dòng) hoặc điền SL VỪA XONG (số làm thêm lần này; chương trình CỘNG DỒN, chặn ở SL cần) -> bấm TIẾP TỤC -> mở Form BÁO CÁO BTP đã điền sẵn:
     MÃ QR, MÃ BTP, TÊN, SL (tổng các dòng), GHI CHÚ = "[CAT <id>=<sl>;...] <ghi chú>" (phiếu: "[CT ...]")
     -> NVSX bấm Gửi trên Form.
   Đổi Form khác: sửa FORM_ID / Q_* bên dưới (lấy từ link điền sẵn của Form).
@@ -64,7 +64,7 @@ button.chinh{width:100%;background:var(--nhan);border-color:var(--nhan);color:#f
   </div>
   <div class="the">
     <table>
-      <thead id="dau"><tr><th>#</th><th>KT (mm)</th><th>SL</th><th>GHI CHÚ (A-B)</th><th>XONG<br>100%</th><th>SL ĐÃ<br>XONG</th></tr></thead>
+      <thead id="dau"><tr><th>#</th><th>KT (mm)</th><th>SL</th><th>GHI CHÚ (A-B)</th><th>XONG<br>100%</th><th>SL VỪA<br>XONG</th></tr></thead>
       <tbody id="bang"></tbody>
       <tfoot id="chan"><tr><td colspan="2">TỔNG</td><td id="tong_sl"></td><td></td><td></td><td id="tong_xong"></td></tr></tfoot>
     </table>
@@ -72,8 +72,8 @@ button.chinh{width:100%;background:var(--nhan);border-color:var(--nhan);color:#f
       <button type="button" id="tat_ca">XONG TẤT CẢ</button>
       <button type="button" id="xoa">XOÁ HẾT</button>
     </div>
-    <p class="hd" id="hd">Dòng chưa cắt thì để trống. <b>SL ĐÃ XONG</b> là <b>tổng</b> số thanh đã cắt của dòng đó tới giờ
-      (không phải số vừa cắt thêm). Máy này nhớ lần báo trước.</p>
+    <p class="hd" id="hd">Dòng chưa cắt thì để trống. <b>SL VỪA XONG</b> là số thanh <b>vừa cắt thêm lần này</b>
+      (các lần báo được cộng dồn). Cắt hết phần còn lại của dòng thì tick <b>XONG 100%</b>. Không gửi lại số đã báo.</p>
   </div>
   <div class="the">
     <label class="o" for="ghi">GHI CHÚ</label>
@@ -114,9 +114,9 @@ button.chinh{width:100%;background:var(--nhan);border-color:var(--nhan);color:#f
   document.title = (phieu ? "Báo cáo " + to.toLowerCase() + " " : "Báo cáo cắt ") + (ten || "");
   if (phieu) {
     $("nho").textContent = "BM WINDOWS · BÁO CÁO TỔ " + to;
-    $("dau").innerHTML = "<tr><th>#</th><th>MÃ GIA CÔNG</th><th>SL</th><th>KT (mm)</th><th>XONG<br>100%</th><th>SL ĐÃ<br>XONG</th></tr>";
-    $("hd").innerHTML = "Mã chưa làm thì để trống. <b>SL ĐÃ XONG</b> là <b>tổng</b> số đã làm xong của mã đó tới giờ " +
-      "(không phải số vừa làm thêm). Máy này nhớ lần báo trước.";
+    $("dau").innerHTML = "<tr><th>#</th><th>MÃ GIA CÔNG</th><th>SL</th><th>KT (mm)</th><th>XONG<br>100%</th><th>SL VỪA<br>XONG</th></tr>";
+    $("hd").innerHTML = "Mã chưa làm thì để trống. <b>SL VỪA XONG</b> là số <b>vừa làm thêm lần này</b> " +
+      "(các lần báo được cộng dồn). Làm hết phần còn lại của mã thì tick <b>XONG 100%</b>. Không gửi lại số đã báo.";
   }
   if (!maQr || !dong.length) {
     bao(phieu ? "Link không có dữ liệu phiếu. Hãy quét lại mã QR trên phiếu bàn giao."
@@ -126,7 +126,6 @@ button.chinh{width:100%;background:var(--nhan);border-color:var(--nhan);color:#f
   }
 
   // ---- dựng bảng ----
-  var cu = luuDoc("bc_cat:" + maQr) || {};
   $("nvsx").value = luuDoc("bc_cat:ten") || "";
   var tb = $("bang");
   dong.forEach(function (d, i) {
@@ -144,7 +143,6 @@ button.chinh{width:100%;background:var(--nhan);border-color:var(--nhan);color:#f
       tr.children[3].textContent = d.gc;
     }
     d.tr = tr; d.tick = tr.querySelector(".tick"); d.o = tr.querySelector(".sl");
-    if (cu[d.id] != null) d.o.value = cu[d.id];
     d.tick.addEventListener("change", function () {
       d.o.value = d.tick.checked ? d.sl : "";
       capNhat();
@@ -188,10 +186,9 @@ button.chinh{width:100%;background:var(--nhan);border-color:var(--nhan);color:#f
       tong += v;
     });
     if (sai.length) { bao("SL không hợp lệ ở dòng: " + sai.join(", ") + ". Chỉ nhập số nguyên."); return; }
-    if (!ct.length) { bao("Chưa có dòng nào được tick XONG 100% hoặc điền SL ĐÃ XONG."); return; }
-    if (vuot.length && !confirm("SL đã xong lớn hơn SL cần ở dòng: " + vuot.join(", ") + ".\nVẫn gửi?")) return;
+    if (!ct.length) { bao("Chưa có dòng nào được tick XONG 100% hoặc điền SL VỪA XONG."); return; }
+    if (vuot.length && !confirm("SL vừa xong lớn hơn SL cần ở dòng: " + vuot.join(", ") + ".\nVẫn gửi?")) return;
     luuGhi("bc_cat:ten", tenNv);
-    luuGhi("bc_cat:" + maQr, nho);
     var ghi = (phieu ? "[CT " : "[CAT ") + ct.join(";") + "]";
     var them = $("ghi").value.replace(/\s+/g, " ").trim();
     if (them) ghi += " " + them;
