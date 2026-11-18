@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Báo cáo cắt</title>
+<!--
+  TRANG BÁO CÁO (BM Windows - MACHINING.py) - dùng chung cho:
+    - QR trên bản phối PDF của tổ CẮT (không có tham số o):
+        #q=<MÃ QR>&t=<PROFILE MÀU>&r=<id>*<KT>*<SL>*<GHI CHÚ A-B>!...
+    - QR trên PHIẾU BÀN GIAO của tổ DẬP / KHOAN / CNC / BÀN GIAO (o = tên tổ, cột 4 = MÃ GIA CÔNG):
+        #q=<MÃ QR>&t=<PROFILE>&o=<TỔ>&r=<id>*<KT>*<SL>*<MÃ GC>!...   (cột: # | MÃ GC | SL | KT | XONG | SL ĐÃ XONG)
+  Dữ liệu bảng nằm sẵn trong link (sau dấu #, không gửi lên máy chủ).
+  NVSX tick XONG 100% hoặc điền SL ĐÃ XONG (TỔNG đã xong tới giờ) -> bấm TIẾP TỤC -> mở Form BÁO CÁO BTP đã điền sẵn:
+    MÃ QR, MÃ BTP, TÊN, SL (tổng các dòng), GHI CHÚ = "[CAT <id>=<sl>;...] <ghi chú>" (phiếu: "[CT ...]")
+    -> NVSX bấm Gửi trên Form.
+  Đổi Form khác: sửa FORM_ID / Q_* bên dưới (lấy từ link điền sẵn của Form).
+-->
+<style>
+:root{--nen:#F4F6F9;--the:#fff;--chu:#1B2A41;--phu:#5B6B80;--vien:#D5DCE6;--nhan:#C2571A;--xanh:#2E7D32;--le:#EEF2F7;--loi:#B3261E}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--nen:#121820;--the:#1B2430;--chu:#E8EDF4;--phu:#9AA8BA;--vien:#334155;--le:#202B38}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--nen);color:var(--chu);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{background:#1B2A41;color:#fff;padding:12px 16px}
+header .nho{font-size:12px;letter-spacing:.08em;opacity:.75}
+header h1{margin:2px 0 0;font-size:20px}
+header .ma{font-size:12px;opacity:.75;word-break:break-all}
+main{padding:12px 16px 40px;max-width:760px;margin:0 auto}
+.the{background:var(--the);border:1px solid var(--vien);border-radius:10px;padding:10px 12px;margin-bottom:12px}
+label.o{display:block;font-weight:700;font-size:13px;margin-bottom:4px}
+input[type=text],textarea{width:100%;font:inherit;padding:9px 10px;border:1px solid var(--vien);border-radius:8px;background:var(--the);color:var(--chu)}
+textarea{min-height:60px;resize:vertical}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{font-size:11px;text-align:center;padding:6px 3px;border-bottom:2px solid var(--vien);color:var(--phu)}
+td{padding:5px 3px;text-align:center;border-bottom:1px solid var(--vien)}
+tbody tr:nth-child(even){background:var(--le)}
+tr.xong td{color:var(--xanh);font-weight:600}
+td.kt{font-weight:700;white-space:nowrap}
+td.gc{font-size:12px;color:var(--phu)}
+td.mgc{text-align:left;font-weight:700;font-size:13px;word-break:break-all}
+input.sl{width:4.2em;font:inherit;font-weight:700;text-align:center;padding:7px 2px;border:1px solid var(--vien);border-radius:6px;background:var(--the);color:var(--chu)}
+input.sl:disabled{background:transparent;border-color:transparent;color:var(--xanh)}
+input.tick{width:26px;height:26px;accent-color:var(--xanh)}
+tfoot td{font-weight:700;border-bottom:0}
+button{font:inherit;font-weight:700;border-radius:10px;padding:12px 14px;border:1px solid var(--vien);background:var(--the);color:var(--chu);cursor:pointer}
+button.chinh{width:100%;background:var(--nhan);border-color:var(--nhan);color:#fff;font-size:17px;padding:14px}
+.hang{display:flex;gap:8px;justify-content:space-between;align-items:center;margin-top:8px;flex-wrap:wrap}
+.hd{font-size:12px;color:var(--phu);margin:6px 0 0}
+#loi{background:#FDECEA;color:var(--loi);border:1px solid #F5C2BE;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-weight:600}
+</style>
+</head>
+<body>
+<header>
+  <div class="nho" id="nho">BM WINDOWS · BÁO CÁO TỔ CẮT</div>
+  <h1 id="ten">—</h1>
+  <div class="ma" id="ma"></div>
+</header>
+<main>
+  <div id="loi" hidden></div>
+  <div class="the">
+    <label class="o" for="nvsx">TÊN NVSX</label>
+    <input type="text" id="nvsx" autocomplete="name" placeholder="Nhập họ tên">
+  </div>
+  <div class="the">
+    <table>
+      <thead id="dau"><tr><th>#</th><th>KT (mm)</th><th>SL</th><th>GHI CHÚ (A-B)</th><th>XONG<br>100%</th><th>SL ĐÃ<br>XONG</th></tr></thead>
+      <tbody id="bang"></tbody>
+      <tfoot id="chan"><tr><td colspan="2">TỔNG</td><td id="tong_sl"></td><td></td><td></td><td id="tong_xong"></td></tr></tfoot>
+    </table>
+    <div class="hang">
+      <button type="button" id="tat_ca">XONG TẤT CẢ</button>
+      <button type="button" id="xoa">XOÁ HẾT</button>
+    </div>
+    <p class="hd" id="hd">Dòng chưa cắt thì để trống. <b>SL ĐÃ XONG</b> là <b>tổng</b> số thanh đã cắt của dòng đó tới giờ
+      (không phải số vừa cắt thêm). Máy này nhớ lần báo trước.</p>
+  </div>
+  <div class="the">
+    <label class="o" for="ghi">GHI CHÚ</label>
+    <textarea id="ghi" placeholder="Không bắt buộc"></textarea>
+  </div>
+  <button type="button" class="chinh" id="gui">TIẾP TỤC → MỞ FORM</button>
+  <p class="hd">Form BÁO CÁO BTP sẽ mở với mọi ô đã điền sẵn — kiểm tra rồi bấm <b>Gửi</b> trên Form.</p>
+</main>
+<script>
+(function () {
+  "use strict";
+  // Form BÁO CÁO BTP (tài khoản công ty, Ai cũng trả lời được) - mã các câu hỏi lấy từ link điền sẵn
+  var FORM = "https://forms.cloud.microsoft/Pages/ResponsePage.aspx?id=1TC0UYq670yfQ4NCuld3DgVTZUBrn0RDqbpqv6RWkiJUM1IwV0o1UlRQSDdUMk85T00yS0lOV0VRVi4u";
+  var Q_MAQR = "raf54e41002ae4f7fb7b51beaa4f84fa7", Q_MABTP = "rbd98b33dcdce4a338b839e66b0c09268",
+      Q_TEN = "r2336012aa97147bf94195e1354ced440", Q_SL = "r9c0cd8c0b21a4c4a9d359a5f2c388903",
+      Q_GHI = "rf8a7cee6e5b740409943714d8d615096";
+
+  var $ = function (id) { return document.getElementById(id); };
+  function luuDoc(k) { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } }
+  function luuGhi(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  function giai(s) { try { return decodeURIComponent((s || "").replace(/\+/g, " ")); } catch (e) { return s || ""; } }
+  function so(s) { var x = parseFloat(String(s).replace(",", ".")); return isFinite(x) ? x : NaN; }
+  function bao(t) { var e = $("loi"); e.textContent = t; e.hidden = !t; if (t) window.scrollTo(0, 0); }
+
+  // ---- đọc dữ liệu trong link ----
+  var p = {};
+  location.hash.replace(/^#/, "").split("&").forEach(function (kv) {
+    var i = kv.indexOf("="); if (i > 0) p[kv.slice(0, i)] = kv.slice(i + 1);
+  });
+  var maQr = giai(p.q), ten = giai(p.t), to = giai(p.o), form = FORM;
+  var phieu = !!to;                     // QR phiếu bàn giao (DẬP / KHOAN / CNC / BÀN GIAO), không có o = bản phối tổ CẮT
+  var dong = (p.r || "").split("!").filter(Boolean).map(function (x) {
+    var c = x.split("*");
+    return { id: giai(c[0]), kt: giai(c[1]), sl: so(giai(c[2])), gc: giai(c[3]) };
+  });
+  $("ten").textContent = ten || "BÁO CÁO CẮT";
+  $("ma").textContent = maQr;
+  document.title = (phieu ? "Báo cáo " + to.toLowerCase() + " " : "Báo cáo cắt ") + (ten || "");
+  if (phieu) {
+    $("nho").textContent = "BM WINDOWS · BÁO CÁO TỔ " + to;
+    $("dau").innerHTML = "<tr><th>#</th><th>MÃ GIA CÔNG</th><th>SL</th><th>KT (mm)</th><th>XONG<br>100%</th><th>SL ĐÃ<br>XONG</th></tr>";
+    $("hd").innerHTML = "Mã chưa làm thì để trống. <b>SL ĐÃ XONG</b> là <b>tổng</b> số đã làm xong của mã đó tới giờ " +
+      "(không phải số vừa làm thêm). Máy này nhớ lần báo trước.";
+  }
+  if (!maQr || !dong.length) {
+    bao(phieu ? "Link không có dữ liệu phiếu. Hãy quét lại mã QR trên phiếu bàn giao."
+              : "Link không có dữ liệu bản phối. Hãy quét lại mã QR trên bản phối.");
+    $("gui").disabled = true;
+    return;
+  }
+
+  // ---- dựng bảng ----
+  var cu = luuDoc("bc_cat:" + maQr) || {};
+  $("nvsx").value = luuDoc("bc_cat:ten") || "";
+  var tb = $("bang");
+  dong.forEach(function (d, i) {
+    var tr = document.createElement("tr");
+    var o = '<td><input type="checkbox" class="tick"></td><td><input class="sl" type="number" inputmode="numeric" min="0" step="1"></td>';
+    if (phieu) {
+      tr.innerHTML = '<td>' + (i + 1) + '</td><td class="mgc"></td><td></td><td class="kt"></td>' + o;
+      tr.children[1].textContent = d.gc;
+      tr.children[2].textContent = isNaN(d.sl) ? "" : d.sl;
+      tr.children[3].textContent = d.kt;
+    } else {
+      tr.innerHTML = '<td>' + (i + 1) + '</td><td class="kt"></td><td></td><td class="gc"></td>' + o;
+      tr.children[1].textContent = d.kt;
+      tr.children[2].textContent = isNaN(d.sl) ? "" : d.sl;
+      tr.children[3].textContent = d.gc;
+    }
+    d.tr = tr; d.tick = tr.querySelector(".tick"); d.o = tr.querySelector(".sl");
+    if (cu[d.id] != null) d.o.value = cu[d.id];
+    d.tick.addEventListener("change", function () {
+      d.o.value = d.tick.checked ? d.sl : "";
+      capNhat();
+    });
+    d.o.addEventListener("input", capNhat);
+    tb.appendChild(tr);
+  });
+  if (phieu) $("chan").innerHTML = '<tr><td colspan="2">TỔNG</td><td id="tong_sl"></td><td></td><td></td><td id="tong_xong"></td></tr>';
+  $("tong_sl").textContent = dong.reduce(function (s, d) { return s + (isNaN(d.sl) ? 0 : d.sl); }, 0);
+
+  function capNhat() {
+    var tong = 0;
+    dong.forEach(function (d) {
+      var v = so(d.o.value), du = !isNaN(v) && v >= d.sl && d.sl > 0;
+      d.tick.checked = du;
+      d.o.disabled = du;
+      d.tr.className = du ? "xong" : "";
+      if (!isNaN(v) && v > 0) tong += v;
+    });
+    $("tong_xong").textContent = tong || "";
+  }
+  capNhat();
+  $("tat_ca").onclick = function () { dong.forEach(function (d) { d.o.value = d.sl; }); capNhat(); };
+  $("xoa").onclick = function () { dong.forEach(function (d) { d.o.value = ""; }); capNhat(); };
+
+  // ---- gửi: mở Form đã điền sẵn ----
+  $("gui").onclick = function () {
+    bao("");
+    var tenNv = $("nvsx").value.replace(/\s+/g, " ").trim();
+    if (!tenNv) { bao("Nhập TÊN NVSX trước khi gửi."); $("nvsx").focus(); return; }
+    var ct = [], tong = 0, vuot = [], sai = [], nho = {};
+    dong.forEach(function (d, i) {
+      var t = d.o.value.trim();
+      if (!t) return;
+      var v = so(t);
+      if (isNaN(v) || v < 0 || Math.floor(v) !== v) { sai.push(i + 1); return; }
+      if (v === 0) return;
+      if (d.sl > 0 && v > d.sl) vuot.push((i + 1) + " (" + v + " > " + d.sl + ")");
+      ct.push(d.id + "=" + v);
+      nho[d.id] = v;
+      tong += v;
+    });
+    if (sai.length) { bao("SL không hợp lệ ở dòng: " + sai.join(", ") + ". Chỉ nhập số nguyên."); return; }
+    if (!ct.length) { bao("Chưa có dòng nào được tick XONG 100% hoặc điền SL ĐÃ XONG."); return; }
+    if (vuot.length && !confirm("SL đã xong lớn hơn SL cần ở dòng: " + vuot.join(", ") + ".\nVẫn gửi?")) return;
+    luuGhi("bc_cat:ten", tenNv);
+    luuGhi("bc_cat:" + maQr, nho);
+    var ghi = (phieu ? "[CT " : "[CAT ") + ct.join(";") + "]";
+    var them = $("ghi").value.replace(/\s+/g, " ").trim();
+    if (them) ghi += " " + them;
+    var e = encodeURIComponent;
+    location.href = form + (form.indexOf("?") < 0 ? "?" : "&") +
+      Q_MAQR + "=" + e(maQr) + "&" + Q_MABTP + "=" + e(ten) + "&" + Q_TEN + "=" + e(tenNv) +
+      "&" + Q_SL + "=" + e(tong) + "&" + Q_GHI + "=" + e(ghi);
+  };
+})();
+</script>
+</body>
+</html>

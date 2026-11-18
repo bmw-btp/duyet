@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Duyệt khối lượng</title>
+<!--
+  TRANG DUYỆT KHỐI LƯỢNG (BM Windows - MACHINING.py) - QR "DUYỆT KHỐI LƯỢNG" trên cover HSGC:
+    duyet.html#k=<khoá base64url>&h=<MÃ HỒ SƠ>
+  Trang tải d/<sha256("ID|"+khoá)[:20]>.json (do MACHINING.py --dang-trang-duyet đẩy lên, ~5-10 phút / lần), giải mã bằng
+  khoá trong link (khoá nằm sau dấu #, không gửi lên máy chủ), hiện các báo cáo CHỜ DUYỆT của hồ sơ.
+  Tổ trưởng bỏ tick báo cáo không đồng ý -> DUYỆT -> mở Form NHẬN / DUYỆT HỒ SƠ điền sẵn
+    MÃ HỒ SƠ = <mã hồ sơ>/DUYET/<ID lớn nhất đã xem>[-<ID bỏ tick>.<...>]  -> tổ trưởng chọn tổ, nhập tên, bấm Gửi.
+  Mã hoá: Ke = SHA256("ENC|"+k), Km = SHA256("MAC|"+k); bản rõ = bản mã XOR SHA256(Ke|nonce|i 4 byte); thẻ = HMAC(Km, nonce|bản mã)[:16].
+-->
+<style>
+:root{--nen:#F4F6F9;--the:#fff;--chu:#1B2A41;--phu:#5B6B80;--vien:#D5DCE6;--nhan:#C2571A;--xanh:#2E7D32;--le:#EEF2F7;--loi:#B3261E;--loi_nen:#FDECEA}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--nen:#121820;--the:#1B2430;--chu:#E8EDF4;--phu:#9AA8BA;--vien:#334155;--le:#202B38;--loi:#F2B8B5;--loi_nen:#3A1F1E}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--nen);color:var(--chu);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{background:#1B2A41;color:#fff;padding:12px 16px}
+header .nho{font-size:12px;letter-spacing:.08em;opacity:.75}
+header h1{margin:2px 0 0;font-size:20px}
+header .ma{font-size:12px;opacity:.75;word-break:break-all}
+main{padding:12px 16px 40px;max-width:760px;margin:0 auto}
+.the{background:var(--the);border:1px solid var(--vien);border-radius:10px;padding:10px 12px;margin-bottom:12px}
+.tong{display:flex;gap:16px;flex-wrap:wrap;font-size:14px}
+.tong b{font-size:20px;display:block}
+.lan{background:var(--the);border:1px solid var(--vien);border-radius:10px;margin-bottom:10px;overflow:hidden}
+.lan.bo{opacity:.55}
+.lan.cb{border-color:var(--loi)}
+.dau{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;cursor:pointer}
+.dau input{width:26px;height:26px;flex:none;accent-color:var(--xanh);margin:0}
+.dau .ten{font-weight:700}
+.dau .phu{font-size:12px;color:var(--phu)}
+.canh{background:var(--loi_nen);color:var(--loi);font-size:12px;font-weight:600;padding:6px 12px}
+.ghi{font-size:13px;color:var(--phu);padding:0 12px 8px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-size:11px;text-align:center;padding:5px 3px;border-top:1px solid var(--vien);border-bottom:1px solid var(--vien);color:var(--phu)}
+td{padding:5px 3px;text-align:center;border-bottom:1px solid var(--vien)}
+tbody tr:nth-child(even){background:var(--le)}
+td.mgc{text-align:left;font-weight:700;word-break:break-all;padding-left:12px}
+td.bao{font-weight:700}
+td.vuot{color:var(--loi)}
+.tang{font-size:11px;color:var(--xanh);display:block}
+button{font:inherit;font-weight:700;border-radius:10px;padding:10px 14px;border:1px solid var(--vien);background:var(--the);color:var(--chu);cursor:pointer}
+button.chinh{width:100%;background:var(--nhan);border-color:var(--nhan);color:#fff;font-size:17px;padding:14px}
+button:disabled{opacity:.5;cursor:default}
+.hang{display:flex;gap:8px;justify-content:space-between;align-items:center;margin:0 0 10px;flex-wrap:wrap}
+.hd{font-size:12px;color:var(--phu);margin:6px 0 0}
+#loi{background:var(--loi_nen);color:var(--loi);border:1px solid var(--loi);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-weight:600}
+#tb{background:#E8F5E9;color:#1B5E20;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:14px}
+</style>
+</head>
+<body>
+<header>
+  <div class="nho" id="nho">BM WINDOWS · DUYỆT KHỐI LƯỢNG</div>
+  <h1 id="ten">Đang tải…</h1>
+  <div class="ma" id="ma"></div>
+</header>
+<main>
+  <div id="loi" hidden></div>
+  <div id="tb" hidden></div>
+  <div class="the" id="khung_tong" hidden>
+    <div class="tong">
+      <div><b id="so_lan">0</b>lần báo cáo chờ duyệt</div>
+      <div><b id="so_chon">0</b>đang chọn duyệt</div>
+    </div>
+    <p class="hd" id="cap_nhat"></p>
+  </div>
+  <div class="hang" id="hang_nut" hidden>
+    <button type="button" id="chon_het">CHỌN HẾT</button>
+    <button type="button" id="bo_het">BỎ HẾT</button>
+  </div>
+  <div id="ds"></div>
+  <div id="cuoi" hidden>
+    <button type="button" class="chinh" id="duyet">DUYỆT CÁC BÁO CÁO ĐÃ CHỌN → MỞ FORM</button>
+    <p class="hd">Bỏ tick báo cáo nào thì báo cáo đó <b>chưa được duyệt</b> (vẫn chờ, lần sau duyệt tiếp hoặc người quản lý LOẠI BỎ).
+      Form mở với MÃ HỒ SƠ điền sẵn — chọn tổ, nhập tên rồi bấm <b>Gửi</b>. Báo cáo gửi sau lúc mở trang này không bị duyệt theo.</p>
+  </div>
+</main>
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  // Nơi chứa dữ liệu d/*.json. MACHINING.py thay dòng này lúc đẩy trang (GitHub raw) - không sửa tay.
+  var NGUON = "https://raw.githubusercontent.com/bmw-btp/duyet/main/d/";
+  function bao(t) { var e = $("loi"); e.textContent = t; e.hidden = !t; if (t) window.scrollTo(0, 0); }
+  function giai(s) { try { return decodeURIComponent((s || "").replace(/\+/g, " ")); } catch (e) { return s || ""; } }
+  function luuDoc(k) { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } }
+  function luuGhi(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  function chu(t) { return new TextEncoder().encode(t); }
+  function noi() {
+    var n = 0, i, a = arguments;
+    for (i = 0; i < a.length; i++) n += a[i].length;
+    var o = new Uint8Array(n), p = 0;
+    for (i = 0; i < a.length; i++) { o.set(a[i], p); p += a[i].length; }
+    return o;
+  }
+  function b64(s) {
+    s = s.replace(/-/g, "+").replace(/_/g, "/");
+    while (s.length % 4) s += "=";
+    var t = atob(s), o = new Uint8Array(t.length);
+    for (var i = 0; i < t.length; i++) o[i] = t.charCodeAt(i);
+    return o;
+  }
+  function hex(b) { return Array.prototype.map.call(b, function (x) { return ("0" + x.toString(16)).slice(-2); }).join(""); }
+  function sha(b) { return crypto.subtle.digest("SHA-256", b).then(function (r) { return new Uint8Array(r); }); }
+  function gio(luc) {                       // "2026-11-16 14:05" -> "14:05 16/11"
+    var m = /^(\d{4})-(\d\d)-(\d\d)[ T](\d\d:\d\d)/.exec(luc || "");
+    return m ? m[4] + " " + m[3] + "/" + m[2] : (luc || "");
+  }
+  function soHien(v) { return v == null ? "" : String(v); }
+
+  // ---- khoá trong link ----
+  var p = {};
+  location.hash.replace(/^#/, "").split("&").forEach(function (kv) {
+    var i = kv.indexOf("="); if (i > 0) p[kv.slice(0, i)] = kv.slice(i + 1);
+  });
+  var maHs = giai(p.h).toUpperCase(), k;
+  $("ma").textContent = maHs;
+  try { k = b64(p.k || ""); } catch (e) { k = new Uint8Array(0); }
+  if (!maHs || k.length !== 16) { $("ten").textContent = "—"; bao("Link không đúng. Hãy quét lại QR DUYỆT KHỐI LƯỢNG trên cover."); return; }
+  if (!window.crypto || !crypto.subtle) { $("ten").textContent = "—"; bao("Trình duyệt này không mở được dữ liệu. Hãy mở bằng Chrome / Safari."); return; }
+
+  async function giaiMa(f) {
+    var ke = await sha(noi(chu("ENC|"), k)), km = await sha(noi(chu("MAC|"), k));
+    var n = b64(f.n), c = b64(f.c), t = b64(f.t);
+    var hk = await crypto.subtle.importKey("raw", km, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+    var th = new Uint8Array(await crypto.subtle.sign("HMAC", hk, noi(n, c))).slice(0, 16);
+    if (hex(th) !== hex(t)) throw new Error("khoá không khớp");
+    var khoi = [];
+    for (var i = 0; i * 32 < c.length; i++) {
+      var dem = new Uint8Array([(i >>> 24) & 255, (i >>> 16) & 255, (i >>> 8) & 255, i & 255]);
+      khoi.push(sha(noi(ke, n, dem)));
+    }
+    var dong = noi.apply(null, await Promise.all(khoi)), r = new Uint8Array(c.length);
+    for (var j = 0; j < c.length; j++) r[j] = c[j] ^ dong[j];
+    return JSON.parse(new TextDecoder().decode(r));
+  }
+
+  async function tai() {
+    var ten = hex(await sha(noi(chu("ID|"), k))).slice(0, 20);
+    var luc = null;
+    var q = NGUON.indexOf("http") === 0 ? "?t=" + Date.now() : "";
+    try { luc = await (await fetch(NGUON + "_luc.json" + q, { cache: "no-store" })).json(); } catch (e) {}
+    var r = await fetch(NGUON + ten + ".json" + q, { cache: "no-store" });
+    if (r.status === 404) throw new Error("CHUA_CO");
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return { nd: await giaiMa(await r.json()), luc: luc };
+  }
+
+  tai().then(function (x) { hien(x.nd, x.luc); }).catch(function (e) {
+    $("ten").textContent = "—";
+    if (e.message === "CHUA_CO")
+      bao("Hồ sơ này chưa có dữ liệu trên trang duyệt. Hồ sơ mới IN thì chờ khoảng 10 phút rồi quét lại.");
+    else if (/khoá/.test(e.message))
+      bao("Không mở được dữ liệu của hồ sơ (QR không khớp). Hãy quét lại QR trên cover.");
+    else
+      bao("Không tải được danh sách (" + e.message + "). Kiểm tra mạng rồi tải lại trang.");
+  });
+
+  function hien(nd, luc) {
+    $("ten").textContent = "TỔ " + (nd.to || "") + " · " + (nd.du_an || "") + (nd.dot ? " · ĐỢT " + nd.dot : "");
+    $("nho").textContent = "BM WINDOWS · DUYỆT KHỐI LƯỢNG TỔ " + (nd.to || "");
+    document.title = "Duyệt " + (nd.to || "") + " " + (nd.dot ? "Đ" + nd.dot : "");
+    var cu = luuDoc("duyet:" + maHs);
+    if (cu && cu.luc && Date.now() - cu.luc < 30 * 60000) {
+      var t = $("tb");
+      t.textContent = "Máy này đã mở Form duyệt lúc " + new Date(cu.luc).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }) +
+        ". Báo cáo đã duyệt sẽ biến khỏi danh sách sau khoảng 10 phút (nếu đã bấm Gửi trên Form).";
+      t.hidden = false;
+    }
+    $("khung_tong").hidden = false;
+    $("cap_nhat").textContent = luc && luc.moi_nhat
+      ? "Danh sách có các báo cáo gửi tới " + gio(luc.moi_nhat) + ". Báo cáo gửi sau đó cần khoảng 10 phút mới hiện."
+      : "Báo cáo vừa gửi cần khoảng 10 phút mới hiện ở đây.";
+    var lan = nd.cho || [];
+    $("so_lan").textContent = lan.length;
+    if (!lan.length) {
+      var o = document.createElement("div");
+      o.className = "the";
+      o.textContent = "Không có báo cáo nào chờ duyệt.";
+      $("ds").appendChild(o);
+      return;
+    }
+    if (!nd.form || nd.form.indexOf("=MAHS") < 0) { bao("Chưa có Form DUYỆT. Báo người quản lý."); return; }
+
+    lan.forEach(function (l) {
+      var the = document.createElement("div"), cb = [];
+      the.className = "lan";
+      var dau = document.createElement("label");
+      dau.className = "dau";
+      var tick = document.createElement("input");
+      tick.type = "checkbox";
+      tick.checked = /^\d+$/.test(l.id);
+      tick.disabled = !/^\d+$/.test(l.id);
+      var pf = [];
+      l.ds.forEach(function (d) { if (d.pf && pf.indexOf(d.pf) < 0) pf.push(d.pf); if (d.cb && cb.indexOf(d.cb) < 0) cb.push(d.cb); });
+      var ch = document.createElement("div");
+      var a = document.createElement("div"); a.className = "ten"; a.textContent = (l.tho || "(không tên)") + " · " + gio(l.luc);
+      var b = document.createElement("div"); b.className = "phu"; b.textContent = (pf.join(", ") || "—") + " · ID " + l.id;
+      ch.appendChild(a); ch.appendChild(b);
+      dau.appendChild(tick); dau.appendChild(ch);
+      the.appendChild(dau);
+      if (tick.disabled) cb.push("Báo cáo không có ID số - không duyệt qua QR được");
+      if (cb.length) {
+        the.classList.add("cb");
+        var c = document.createElement("div"); c.className = "canh"; c.textContent = "⚠ " + cb.join(" · ");
+        the.appendChild(c);
+      }
+      if (l.ghi) { var g = document.createElement("div"); g.className = "ghi"; g.textContent = "Ghi chú: " + l.ghi; the.appendChild(g); }
+      var tb = document.createElement("table");
+      var tong = l.ds.some(function (d) { return d.tong; });
+      tb.innerHTML = "<thead><tr><th style='text-align:left;padding-left:12px'>MÃ</th><th>KT</th><th>" +
+        (tong ? "BÁO<br>(TỔNG)" : "SL<br>BÁO") + "</th><th>CẦN</th><th>ĐÃ<br>DUYỆT</th></tr></thead>";
+      var bd = document.createElement("tbody");
+      l.ds.forEach(function (d) {
+        var tr = document.createElement("tr");
+        tr.innerHTML = "<td class='mgc'></td><td></td><td class='bao'></td><td></td><td></td>";
+        tr.children[0].textContent = d.gc || d.pf || "?";
+        tr.children[1].textContent = d.kt;
+        tr.children[2].textContent = soHien(d.bao);
+        if (d.tong && d.tang != null && d.tang !== d.bao) {
+          var s = document.createElement("span"); s.className = "tang"; s.textContent = "+" + d.tang; tr.children[2].appendChild(s);
+        }
+        var vuot = d.can != null && d.bao != null && (d.tong ? d.bao > d.can : (d.da || 0) + d.bao > d.can);
+        if (vuot) tr.children[2].classList.add("vuot");
+        tr.children[3].textContent = soHien(d.can);
+        tr.children[4].textContent = soHien(d.da);
+        bd.appendChild(tr);
+      });
+      tb.appendChild(bd);
+      the.appendChild(tb);
+      l.tick = tick; l.the = the;
+      tick.addEventListener("change", dem);
+      $("ds").appendChild(the);
+    });
+    $("hang_nut").hidden = false;
+    $("cuoi").hidden = false;
+    dem();
+
+    function dem() {
+      var n = 0;
+      lan.forEach(function (l) { l.the.classList.toggle("bo", !l.tick.checked); if (l.tick.checked) n++; });
+      $("so_chon").textContent = n;
+      $("duyet").disabled = !n;
+    }
+    $("chon_het").onclick = function () { lan.forEach(function (l) { if (!l.tick.disabled) l.tick.checked = true; }); dem(); };
+    $("bo_het").onclick = function () { lan.forEach(function (l) { l.tick.checked = false; }); dem(); };
+    $("duyet").onclick = function () {
+      bao("");
+      var so = lan.filter(function (l) { return /^\d+$/.test(l.id); });
+      var chon = so.filter(function (l) { return l.tick.checked; });
+      if (!chon.length) { bao("Chưa chọn báo cáo nào."); return; }
+      var max = Math.max.apply(null, so.map(function (l) { return parseInt(l.id, 10); }));
+      var tru = so.filter(function (l) { return !l.tick.checked; }).map(function (l) { return l.id; });
+      var ma = maHs + "/DUYET/" + max + (tru.length ? "-" + tru.join(".") : "");
+      if (!confirm("Duyệt " + chon.length + " lần báo cáo" + (tru.length ? " (để lại " + tru.length + " lần chưa duyệt)" : "") + "?")) return;
+      luuGhi("duyet:" + maHs, { luc: Date.now(), ma: ma });
+      location.href = nd.form.replace("=MAHS", "=" + encodeURIComponent(ma));
+    };
+  }
+})();
+</script>
+</body>
+</html>
