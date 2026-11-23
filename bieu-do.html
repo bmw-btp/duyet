@@ -77,7 +77,7 @@ main{padding:12px 16px 40px;max-width:760px;margin:0 auto}
   var $ = function (id) { return document.getElementById(id); };
   // Nơi chứa dữ liệu d/*.json. MACHINING.py thay dòng này lúc đẩy trang (GitHub raw) - không sửa tay.
   var NGUON = "https://raw.githubusercontent.com/bmw-btp/duyet/main/d/";
-  var DS_TO = ["TẤT CẢ", "CẮT", "DẬP", "KHOAN", "CNC", "BG"];
+  var DS_TO = ["TẤT CẢ", "SOẠN NHÔM", "CẮT", "DẬP", "KHOAN", "CNC", "BG"];
   var THU_TU = { "SOẠN NHÔM": 0, "CẮT": 1, "DẬP": 2, "KHOAN": 3, "CNC": 4, "BG": 5 };
   function bao(t) { var e = $("loi"); e.textContent = t; e.hidden = !t; }
   function giai(s) { try { return decodeURIComponent((s || "").replace(/\+/g, " ")); } catch (e) { return s || ""; } }
@@ -166,7 +166,7 @@ main{padding:12px 16px 40px;max-width:760px;margin:0 auto}
     if (nho.da && duAn.indexOf(nho.da) >= 0) sel.value = nho.da;
     DS_TO.forEach(function (t) {
       var b = document.createElement("button");
-      b.type = "button"; b.textContent = t === "TẤT CẢ" ? "TẤT CẢ TỔ" : "TỔ " + t;
+      b.type = "button"; b.textContent = t === "TẤT CẢ" ? "TẤT CẢ TỔ" : t === "SOẠN NHÔM" ? t : "TỔ " + t;
       b.onclick = function () { toChon = t; ve(); };
       b.dataset.to = t;
       $("loc_to").appendChild(b);
@@ -188,7 +188,7 @@ main{padding:12px 16px 40px;max-width:760px;margin:0 auto}
       var nhom = {}, ten = [];
       ds.forEach(function (h) {
         if (daChon && h.du_an !== daChon) return;
-        if (h.nhom ? toChon !== "TẤT CẢ" : (toChon !== "TẤT CẢ" && h.to !== toChon)) return;
+        if (toChon !== "TẤT CẢ" && (h.nhom ? toChon !== "SOẠN NHÔM" : h.to !== toChon)) return;
         if (an && h.can && h.xong >= h.can) return;
         var d = h.du_an || "(KHÔNG RÕ DỰ ÁN)";
         if (!nhom[d]) { nhom[d] = []; ten.push(d); }
@@ -208,7 +208,8 @@ main{padding:12px 16px 40px;max-width:760px;margin:0 auto}
           return soSanh(a.dot, b.dot) || (THU_TU[a.to] == null ? 99 : THU_TU[a.to]) - (THU_TU[b.to] == null ? 99 : THU_TU[b.to]);
         });
         var can = 0, xong = 0;
-        hs.forEach(function (h) { if (!h.nhom) { can += h.can; xong += h.xong; } });
+        var chiNhom = hs.every(function (h) { return h.nhom; });   // lọc SOẠN NHÔM: % dự án theo số thanh
+        hs.forEach(function (h) { if (chiNhom || !h.nhom) { can += h.can; xong += h.xong; } });
         var the = document.createElement("div"); the.className = "da";
         var dau = document.createElement("div"); dau.className = "da_dau";
         var a = document.createElement("span"); a.textContent = d;
