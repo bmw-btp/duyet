@@ -91,6 +91,8 @@ button.chinh{width:100%;background:var(--nhan);border-color:var(--nhan);color:#f
       Q_TEN = "r2336012aa97147bf94195e1354ced440", Q_SL = "r9c0cd8c0b21a4c4a9d359a5f2c388903",
       Q_GHI = "rf8a7cee6e5b740409943714d8d615096";
 
+  // Nơi chứa dữ liệu d/*.json (bảng SOẠN NHÔM). MACHINING.py thay dòng này lúc đẩy trang (GitHub raw) - không sửa tay.
+  var NGUON = "https://raw.githubusercontent.com/bmw-btp/duyet/main/d/";
   var $ = function (id) { return document.getElementById(id); };
   function luuDoc(k) { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } }
   function luuGhi(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
@@ -103,12 +105,80 @@ button.chinh{width:100%;background:var(--nhan);border-color:var(--nhan);color:#f
   location.hash.replace(/^#/, "").split("&").forEach(function (kv) {
     var i = kv.indexOf("="); if (i > 0) p[kv.slice(0, i)] = kv.slice(i + 1);
   });
-  var maQr = giai(p.q), ten = giai(p.t), to = giai(p.o), form = FORM;
-  var phieu = !!to;                     // QR phiếu bàn giao (DẬP / KHOAN / CNC / BÀN GIAO), không có o = bản phối tổ CẮT
-  var dong = (p.r || "").split("!").filter(Boolean).map(function (x) {
+  if (p.n) {                            // QR SOẠN NHÔM link ngắn: bảng nằm trên web (mã hoá), tải về rồi dựng bảng
+    $("ten").textContent = "SOẠN NHÔM";
+    $("ma").textContent = giai(p.h);
+    $("gui").disabled = true;
+    taiNhom(p.n).then(function (nd) {
+      $("gui").disabled = false;
+      var con = 0;
+      var ds = nd.r.map(function (x) {
+        var da = x[4] || 0, can = x[2];
+        if (da >= can) con++;
+        return { id: x[0], kt: String(x[1]), sl: Math.max(0, can - da), gc: x[3], can: can, da: da };
+      }).filter(function (d) { return d.sl > 0; });
+      chay(nd.q, nd.t, nd.o, ds, { du_an: nd.du_an, dot: nd.dot, xong: con, tong: nd.r.length });
+    }).catch(function (e) {
+      if (e.message === "CHUA_CO")
+        bao("Chưa có bảng soạn nhôm của hồ sơ này trên web. Hồ sơ mới IN thì chờ khoảng 5-10 phút rồi quét lại.");
+      else if (/khoá/.test(e.message))
+        bao("Không mở được dữ liệu (QR không khớp). Hãy quét lại QR SOẠN NHÔM trên cover.");
+      else
+        bao("Không tải được bảng soạn nhôm (" + e.message + "). Kiểm tra mạng rồi tải lại trang.");
+    });
+    return;
+  }
+  chay(giai(p.q), giai(p.t), giai(p.o), (p.r || "").split("!").filter(Boolean).map(function (x) {
     var c = x.split("*");
     return { id: giai(c[0]), kt: giai(c[1]), sl: so(giai(c[2])), gc: giai(c[3]) };
-  });
+  }));
+
+  // ---- QR SOẠN NHÔM: tải d/<sha256("ID|"+khoá)[:20]>.json rồi giải mã (cùng cách trang DUYỆT) ----
+  function chu(t) { return new TextEncoder().encode(t); }
+  function noi() {
+    var n = 0, i, a = arguments;
+    for (i = 0; i < a.length; i++) n += a[i].length;
+    var o = new Uint8Array(n), q = 0;
+    for (i = 0; i < a.length; i++) { o.set(a[i], q); q += a[i].length; }
+    return o;
+  }
+  function b64(s) {
+    s = s.replace(/-/g, "+").replace(/_/g, "/");
+    while (s.length % 4) s += "=";
+    var t = atob(s), o = new Uint8Array(t.length);
+    for (var i = 0; i < t.length; i++) o[i] = t.charCodeAt(i);
+    return o;
+  }
+  function hex(b) { return Array.prototype.map.call(b, function (x) { return ("0" + x.toString(16)).slice(-2); }).join(""); }
+  function sha(b) { return crypto.subtle.digest("SHA-256", b).then(function (r) { return new Uint8Array(r); }); }
+  async function taiNhom(kb) {
+    if (!window.crypto || !crypto.subtle) throw new Error("trình duyệt không hỗ trợ, hãy mở bằng Chrome / Safari");
+    var k = b64(kb);
+    if (k.length !== 16) throw new Error("khoá sai");
+    var ten = hex(await sha(noi(chu("ID|"), k))).slice(0, 20);
+    var q = NGUON.indexOf("http") === 0 ? "?t=" + Date.now() : "";
+    var r = await fetch(NGUON + ten + ".json" + q, { cache: "no-store" });
+    if (r.status === 404) throw new Error("CHUA_CO");
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    var f = await r.json();
+    var ke = await sha(noi(chu("ENC|"), k)), km = await sha(noi(chu("MAC|"), k));
+    var n = b64(f.n), c = b64(f.c), t = b64(f.t);
+    var hk = await crypto.subtle.importKey("raw", km, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+    var th = new Uint8Array(await crypto.subtle.sign("HMAC", hk, noi(n, c))).slice(0, 16);
+    if (hex(th) !== hex(t)) throw new Error("khoá không khớp");
+    var khoi = [];
+    for (var i = 0; i * 32 < c.length; i++) {
+      var dem = new Uint8Array([(i >>> 24) & 255, (i >>> 16) & 255, (i >>> 8) & 255, i & 255]);
+      khoi.push(sha(noi(ke, n, dem)));
+    }
+    var dong = noi.apply(null, await Promise.all(khoi)), o = new Uint8Array(c.length);
+    for (var j = 0; j < c.length; j++) o[j] = c[j] ^ dong[j];
+    return JSON.parse(new TextDecoder().decode(o));
+  }
+
+  function chay(maQr, ten, to, dong, nhom) {
+  var form = FORM;
+  var phieu = !!to;                     // QR phiếu bàn giao (DẬP / KHOAN / CNC / BÀN GIAO), không có o = bản phối tổ CẮT
   $("ten").textContent = ten || "BÁO CÁO CẮT";
   $("ma").textContent = maQr;
   document.title = (phieu ? "Báo cáo " + to.toLowerCase() + " " : "Báo cáo cắt ") + (ten || "");
@@ -117,6 +187,18 @@ button.chinh{width:100%;background:var(--nhan);border-color:var(--nhan);color:#f
     $("dau").innerHTML = "<tr><th>#</th><th>MÃ GIA CÔNG</th><th>SL</th><th>KT (mm)</th><th>XONG<br>100%</th><th>SL VỪA<br>XONG</th></tr>";
     $("hd").innerHTML = "Mã chưa làm thì để trống. <b>SL VỪA XONG</b> là số <b>vừa làm thêm lần này</b> " +
       "(các lần báo được cộng dồn). Làm hết phần còn lại của mã thì tick <b>XONG 100%</b>. Không gửi lại số đã báo.";
+  }
+  if (nhom) {                           // SOẠN NHÔM: SL = số thanh CÒN PHẢI SOẠN (đã trừ các lần báo trước)
+    $("ten").textContent = (nhom.du_an || "") + (nhom.dot ? " · ĐỢT " + nhom.dot : "");
+    $("dau").innerHTML = "<tr><th>#</th><th>MÃ PROFILE · MÀU</th><th>CÒN<br>SOẠN</th><th>DÀI (mm)</th><th>XONG<br>100%</th><th>SL VỪA<br>SOẠN</th></tr>";
+    $("hd").innerHTML = "<b>CÒN SOẠN</b> = số thanh còn phải soạn (đã trừ các lần báo trước, cập nhật khoảng 5 phút / lần). " +
+      "Điền <b>SL VỪA SOẠN</b> (số thanh vừa soạn thêm lần này) hoặc tick <b>XONG 100%</b>." +
+      (nhom.xong ? " Đã soạn đủ " + nhom.xong + "/" + nhom.tong + " dòng (đã ẩn)." : "");
+    if (!dong.length) {
+      bao("Đã soạn đủ toàn bộ " + nhom.tong + " dòng nhôm của đợt này.");
+      $("gui").disabled = true;
+      return;
+    }
   }
   if (!maQr || !dong.length) {
     bao(phieu ? "Link không có dữ liệu phiếu. Hãy quét lại mã QR trên phiếu bàn giao."
@@ -197,6 +279,7 @@ button.chinh{width:100%;background:var(--nhan);border-color:var(--nhan);color:#f
       Q_MAQR + "=" + e(maQr) + "&" + Q_MABTP + "=" + e(ten) + "&" + Q_TEN + "=" + e(tenNv) +
       "&" + Q_SL + "=" + e(tong) + "&" + Q_GHI + "=" + e(ghi);
   };
+  }
 })();
 </script>
 </body>
