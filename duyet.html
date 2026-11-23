@@ -51,6 +51,26 @@ button:disabled{opacity:.5;cursor:default}
 .hd{font-size:12px;color:var(--phu);margin:6px 0 0}
 #loi{background:var(--loi_nen);color:var(--loi);border:1px solid var(--loi);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-weight:600}
 #tb{background:#E8F5E9;color:#1B5E20;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:14px}
+/* SỐ LƯỢNG CÒN LẠI của hồ sơ (23/11/2026) */
+#khung_con .tieu{font-size:12px;font-weight:700;letter-spacing:.06em;color:var(--phu);margin-bottom:4px}
+#khung_con .so{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;font-size:13px;color:var(--phu)}
+#khung_con .so b{font-size:26px;color:var(--chu);display:block;line-height:1.1}
+#khung_con .so .con b{color:var(--nhan)}
+#khung_con .so .xong b{color:var(--xanh)}
+.thanh{height:12px;border-radius:6px;background:var(--vien);overflow:hidden;display:flex;margin:10px 0 4px}
+.thanh i{display:block;height:100%}
+.thanh .t_da{background:var(--xanh)}
+.thanh .t_cho{background:#E8B04B}
+.chu_thich{font-size:12px;color:var(--phu);display:flex;gap:12px;flex-wrap:wrap}
+.chu_thich span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px;background:var(--mau)}
+#ct_con{margin-top:10px}
+#ct_con table td.con{font-weight:700;color:var(--nhan)}
+#ct_con table td.du{color:var(--xanh);font-weight:700}
+#ct_con tr.nhom td{background:var(--le);text-align:left;font-weight:700;padding-left:12px;font-size:12px}
+#ct_con tr.nhom td span{float:right;padding-right:8px;color:var(--nhan)}
+#ct_con tr.ngoai td{color:var(--phu);font-style:italic}
+.chon_xem{display:flex;gap:8px;align-items:center;font-size:13px;margin:8px 0 6px}
+.chon_xem input{width:20px;height:20px;margin:0;accent-color:var(--nhan)}
 </style>
 </head>
 <body>
@@ -62,6 +82,29 @@ button:disabled{opacity:.5;cursor:default}
 <main>
   <div id="loi" hidden></div>
   <div id="tb" hidden></div>
+  <div class="the" id="khung_con" hidden>
+    <div class="tieu">SỐ LƯỢNG CÒN LẠI CỦA ĐỢT</div>
+    <div class="so">
+      <div class="con"><b id="con_sl">0</b>còn lại</div>
+      <div class="xong"><b id="con_pt">0%</b>đã duyệt</div>
+      <div><b id="con_can">0</b>tổng cần</div>
+    </div>
+    <div class="thanh"><i class="t_da" id="con_t_da"></i><i class="t_cho" id="con_t_cho"></i></div>
+    <div class="chu_thich">
+      <span style="--mau:var(--xanh)" id="con_ct_da"></span>
+      <span style="--mau:#E8B04B" id="con_ct_cho"></span>
+      <span style="--mau:var(--vien)" id="con_ct_chua"></span>
+    </div>
+    <button type="button" id="con_nut" style="width:100%;margin-top:10px">XEM CHI TIẾT CÒN LẠI ▾</button>
+    <div id="ct_con" hidden>
+      <label class="chon_xem"><input type="checkbox" id="con_het"> Hiện cả dòng đã xong</label>
+      <table>
+        <thead><tr><th style="text-align:left;padding-left:12px">MÃ</th><th>KT</th><th>CẦN</th><th>ĐÃ<br>DUYỆT</th><th>CHỜ<br>DUYỆT</th><th>CÒN<br>LẠI</th></tr></thead>
+        <tbody id="con_bang"></tbody>
+      </table>
+      <p class="hd" id="con_ghi"></p>
+    </div>
+  </div>
   <div class="the" id="khung_tong" hidden>
     <div class="tong">
       <div><b id="so_lan">0</b>lần báo cáo chờ duyệt</div>
@@ -161,6 +204,87 @@ button:disabled{opacity:.5;cursor:default}
       bao("Không tải được danh sách (" + e.message + "). Kiểm tra mạng rồi tải lại trang.");
   });
 
+  // ---- SỐ LƯỢNG CÒN LẠI: td = [{pf, gc, kt, can, da, cho, bo?, tu?, di?}] (dữ liệu cũ không có td -> ẩn) ----
+  function so(v) { return typeof v === "number" && isFinite(v) ? v : 0; }
+  function nghin(v) { return Math.round(v).toLocaleString("vi-VN"); }
+  function hienConLai(td) {
+    if (!td || !td.length) return;
+    var tinh = td.filter(function (d) { return !d.bo && !d.di; });
+    var ngoai = td.filter(function (d) { return d.bo || d.di; });
+    var can = 0, da = 0, cho = 0;
+    tinh.forEach(function (d) { can += so(d.can); da += Math.min(so(d.da), so(d.can) || so(d.da)); cho += so(d.cho); });
+    var con = Math.max(0, can - da);
+    $("con_sl").textContent = nghin(con);
+    $("con_can").textContent = nghin(can);
+    $("con_pt").textContent = (can ? Math.floor(100 * da / can) : 0) + "%";
+    $("con_t_da").style.width = (can ? 100 * da / can : 0) + "%";
+    $("con_t_cho").style.width = (can ? 100 * Math.min(cho, con) / can : 0) + "%";
+    $("con_ct_da").textContent = "Đã duyệt " + nghin(da);
+    $("con_ct_cho").textContent = "Chờ duyệt " + nghin(Math.min(cho, con));
+    $("con_ct_chua").textContent = "Chưa làm " + nghin(Math.max(0, con - cho));
+    $("khung_con").hidden = false;
+    $("con_nut").onclick = function () {
+      var an = !$("ct_con").hidden;
+      $("ct_con").hidden = an;
+      $("con_nut").textContent = an ? "XEM CHI TIẾT CÒN LẠI ▾" : "THU GỌN ▴";
+    };
+    function ve() {
+      var het = $("con_het").checked, bd = $("con_bang");
+      bd.innerHTML = "";
+      var nhom = [], theo = {};
+      tinh.forEach(function (d) {
+        if (!het && so(d.can) && so(d.da) >= so(d.can)) return;
+        var k = d.pf || "(không mã)";
+        if (!theo[k]) { theo[k] = []; nhom.push(k); }
+        theo[k].push(d);
+      });
+      nhom.forEach(function (k) {
+        var cl = 0;
+        theo[k].forEach(function (d) { cl += Math.max(0, so(d.can) - so(d.da)); });
+        var tr = document.createElement("tr");
+        tr.className = "nhom";
+        tr.innerHTML = "<td colspan='6'></td>";
+        tr.firstChild.textContent = k;
+        var s = document.createElement("span"); s.textContent = cl ? "còn " + nghin(cl) : "xong";
+        tr.firstChild.appendChild(s);
+        bd.appendChild(tr);
+        theo[k].forEach(function (d) {
+          var r = document.createElement("tr"), c = Math.max(0, so(d.can) - so(d.da));
+          r.innerHTML = "<td class='mgc'></td><td></td><td></td><td></td><td></td><td></td>";
+          r.children[0].textContent = (d.gc || d.pf || "?") + (d.tu ? " (từ tổ " + d.tu + ")" : "");
+          r.children[1].textContent = d.kt || "";
+          r.children[2].textContent = nghin(so(d.can));
+          r.children[3].textContent = so(d.da) ? nghin(so(d.da)) : "";
+          r.children[4].textContent = so(d.cho) ? nghin(so(d.cho)) : "";
+          r.children[5].textContent = c ? nghin(c) : "✓";
+          r.children[5].className = c ? "con" : "du";
+          bd.appendChild(r);
+        });
+      });
+      if (!nhom.length) {
+        var tr = document.createElement("tr");
+        tr.innerHTML = "<td colspan='6' style='padding:12px'>Đã xong hết.</td>";
+        bd.appendChild(tr);
+      }
+      ngoai.forEach(function (d) {
+        if (!het) return;
+        var r = document.createElement("tr");
+        r.className = "ngoai";
+        r.innerHTML = "<td class='mgc'></td><td></td><td></td><td></td><td></td><td></td>";
+        r.children[0].textContent = (d.gc || d.pf || "?") + (d.di ? " (ĐÃ CHUYỂN TỔ " + d.di + ")" : " (KHÔNG CÒN TRONG HSGC)");
+        r.children[1].textContent = d.kt || "";
+        r.children[2].textContent = nghin(so(d.can));
+        r.children[3].textContent = so(d.da) ? nghin(so(d.da)) : "";
+        bd.appendChild(r);
+      });
+      $("con_ghi").textContent = "Còn lại = CẦN − ĐÃ DUYỆT. Báo cáo chờ duyệt chưa được trừ." +
+        (ngoai.length ? " " + ngoai.length + " dòng đã chuyển tổ / không còn trong HSGC không tính" +
+          (het ? " (chữ nghiêng)." : " (tick ô trên để xem).") : "");
+    }
+    $("con_het").onchange = ve;
+    ve();
+  }
+
   function hien(nd, luc) {
     $("ten").textContent = "TỔ " + (nd.to || "") + " · " + (nd.du_an || "") + (nd.dot ? " · ĐỢT " + nd.dot : "");
     $("nho").textContent = "BM WINDOWS · DUYỆT KHỐI LƯỢNG TỔ " + (nd.to || "");
@@ -172,6 +296,7 @@ button:disabled{opacity:.5;cursor:default}
         ". Báo cáo đã duyệt sẽ biến khỏi danh sách sau khoảng 10 phút (nếu đã bấm Gửi trên Form).";
       t.hidden = false;
     }
+    hienConLai(nd.td);
     $("khung_tong").hidden = false;
     $("cap_nhat").textContent = luc && luc.moi_nhat
       ? "Danh sách có các báo cáo gửi tới " + gio(luc.moi_nhat) + ". Báo cáo gửi sau đó cần khoảng 10 phút mới hiện."

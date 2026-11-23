@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Biểu đồ hoàn thành</title>
+<!--
+  BIỂU ĐỒ HOÀN THÀNH THEO DỰ ÁN / ĐỢT / TỔ (BM Windows - MACHINING.py, 23/11/2026) - QR dán ở các tổ:
+    bieu-do.html#k=<khoá base64url>[&to=<TỔ lọc sẵn>]
+  Khoá cố định = HMAC(bí mật chung, "BIEUDO|TAT CA")[:16] -> QR in 1 lần dùng mãi. Dữ liệu d/<sha256("ID|"+khoá)[:20]>.json
+  (MACHINING.py --dang-trang-duyet đẩy cùng lịch 5 phút), mã hoá giống trang DUYỆT (duyet.html).
+  Cách tính giống biểu đồ tab THEO DÕI HSGC: % = SL đã duyệt (chặn ở SL cần) / SL cần; phần chờ duyệt màu vàng.
+-->
+<style>
+:root{--nen:#F4F6F9;--the:#fff;--chu:#1B2A41;--phu:#5B6B80;--vien:#D5DCE6;--nhan:#C2571A;--le:#EEF2F7;--loi:#B3261E;--loi_nen:#FDECEA;
+  --chua:#8A8578;--dang:#C77700;--xong:#2E7D32;--vuot:#B3261E;--cho:#F2C46D;--ray:#E6EAF0}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--nen:#121820;--the:#1B2430;--chu:#E8EDF4;--phu:#9AA8BA;--vien:#334155;--le:#202B38;--loi:#F2B8B5;--loi_nen:#3A1F1E;--ray:#2A3644;--xong:#4CAF50;--dang:#E09A2B}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--nen);color:var(--chu);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{background:#1B2A41;color:#fff;padding:12px 16px}
+header .nho{font-size:12px;letter-spacing:.08em;opacity:.75}
+header h1{margin:2px 0 0;font-size:20px}
+header .luc{font-size:12px;opacity:.75}
+main{padding:12px 16px 40px;max-width:760px;margin:0 auto}
+#loi{background:var(--loi_nen);color:var(--loi);border:1px solid var(--loi);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-weight:600}
+.loc{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.loc button{font:inherit;font-size:13px;font-weight:700;border-radius:999px;padding:6px 12px;border:1px solid var(--vien);background:var(--the);color:var(--chu);cursor:pointer}
+.loc button.chon{background:var(--chu);border-color:var(--chu);color:var(--nen)}
+.hang{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px;font-size:13px}
+.hang select{font:inherit;font-size:14px;padding:6px 8px;border-radius:8px;border:1px solid var(--vien);background:var(--the);color:var(--chu);max-width:100%;flex:1 1 180px}
+.hang label{display:flex;gap:6px;align-items:center;white-space:nowrap}
+.hang input{width:20px;height:20px;margin:0;accent-color:var(--nhan)}
+.da{background:var(--the);border:1px solid var(--vien);border-radius:10px;margin-bottom:12px;overflow:hidden}
+.da_dau{display:flex;justify-content:space-between;gap:8px;padding:8px 12px;background:var(--le);font-weight:700}
+.da_dau .pt{white-space:nowrap}
+.dong{display:grid;grid-template-columns:58px 92px 1fr 42px;gap:6px;align-items:center;padding:6px 12px;border-top:1px solid var(--vien)}
+.dong .dot{font-size:13px;font-weight:700}
+.dong .to{font-size:13px;color:var(--phu)}
+.dong .pt{font-size:13px;font-weight:700;text-align:right}
+.ray{position:relative;height:22px;background:var(--ray);border-radius:5px;overflow:hidden}
+.ray i{position:absolute;top:0;bottom:0}
+.ray .cho{background:var(--cho)}
+.ray span{position:relative;font-size:11px;font-weight:600;line-height:22px;padding-left:6px;color:var(--chu);white-space:nowrap}
+.ray b.canh{position:absolute;right:6px;top:0;line-height:22px;color:var(--loi)}
+.chu_thich{font-size:12px;color:var(--phu);display:flex;gap:12px;flex-wrap:wrap;margin:4px 0 12px}
+.chu_thich span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px;background:var(--mau)}
+.trong{background:var(--the);border:1px solid var(--vien);border-radius:10px;padding:14px;color:var(--phu)}
+.dong .to{white-space:nowrap}
+@media (max-width:380px){.dong{grid-template-columns:54px 84px 1fr 38px;padding:6px 8px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="nho">BM WINDOWS · MACHINING</div>
+  <h1>HOÀN THÀNH THEO DỰ ÁN / ĐỢT / TỔ</h1>
+  <div class="luc" id="luc">Đang tải…</div>
+</header>
+<main>
+  <div id="loi" hidden></div>
+  <div class="loc" id="loc_to" hidden></div>
+  <div class="hang" id="hang_loc" hidden>
+    <select id="loc_da"></select>
+    <label><input type="checkbox" id="an_xong"> Ẩn đợt xong 100%</label>
+  </div>
+  <div class="chu_thich" id="chu_thich" hidden>
+    <span style="--mau:var(--dang)">Đã duyệt</span>
+    <span style="--mau:var(--xong)">Xong</span>
+    <span style="--mau:var(--cho)">Chờ duyệt</span>
+    <span style="--mau:var(--ray)">Chưa làm</span>
+  </div>
+  <div id="ds"></div>
+</main>
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  // Nơi chứa dữ liệu d/*.json. MACHINING.py thay dòng này lúc đẩy trang (GitHub raw) - không sửa tay.
+  var NGUON = "https://raw.githubusercontent.com/bmw-btp/duyet/main/d/";
+  var DS_TO = ["TẤT CẢ", "CẮT", "DẬP", "KHOAN", "CNC", "BG"];
+  var THU_TU = { "SOẠN NHÔM": 0, "CẮT": 1, "DẬP": 2, "KHOAN": 3, "CNC": 4, "BG": 5 };
+  function bao(t) { var e = $("loi"); e.textContent = t; e.hidden = !t; }
+  function giai(s) { try { return decodeURIComponent((s || "").replace(/\+/g, " ")); } catch (e) { return s || ""; } }
+  function luuDoc(k) { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } }
+  function luuGhi(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  function chu(t) { return new TextEncoder().encode(t); }
+  function noi() {
+    var n = 0, i, a = arguments;
+    for (i = 0; i < a.length; i++) n += a[i].length;
+    var o = new Uint8Array(n), p = 0;
+    for (i = 0; i < a.length; i++) { o.set(a[i], p); p += a[i].length; }
+    return o;
+  }
+  function b64(s) {
+    s = s.replace(/-/g, "+").replace(/_/g, "/");
+    while (s.length % 4) s += "=";
+    var t = atob(s), o = new Uint8Array(t.length);
+    for (var i = 0; i < t.length; i++) o[i] = t.charCodeAt(i);
+    return o;
+  }
+  function hex(b) { return Array.prototype.map.call(b, function (x) { return ("0" + x.toString(16)).slice(-2); }).join(""); }
+  function sha(b) { return crypto.subtle.digest("SHA-256", b).then(function (r) { return new Uint8Array(r); }); }
+  function gio(luc) {
+    var m = /^(\d{4})-(\d\d)-(\d\d)[ T](\d\d:\d\d)/.exec(luc || "");
+    return m ? m[4] + " " + m[3] + "/" + m[2] : (luc || "");
+  }
+  function nghin(v) { return Math.round(v || 0).toLocaleString("vi-VN"); }
+  function boDau(s) { return (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/gi, "d").toUpperCase(); }
+  function soSanh(a, b) { return boDau(a).localeCompare(boDau(b), "vi", { numeric: true }); }
+
+  var p = {};
+  location.hash.replace(/^#/, "").split("&").forEach(function (kv) {
+    var i = kv.indexOf("="); if (i > 0) p[kv.slice(0, i)] = kv.slice(i + 1);
+  });
+  var k;
+  try { k = b64(p.k || ""); } catch (e) { k = new Uint8Array(0); }
+  if (k.length !== 16) { $("luc").textContent = ""; bao("Link không đúng. Hãy quét lại QR BIỂU ĐỒ."); return; }
+  if (!window.crypto || !crypto.subtle) { $("luc").textContent = ""; bao("Trình duyệt này không mở được dữ liệu. Hãy mở bằng Chrome / Safari."); return; }
+
+  async function giaiMa(f) {
+    var ke = await sha(noi(chu("ENC|"), k)), km = await sha(noi(chu("MAC|"), k));
+    var n = b64(f.n), c = b64(f.c), t = b64(f.t);
+    var hk = await crypto.subtle.importKey("raw", km, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+    var th = new Uint8Array(await crypto.subtle.sign("HMAC", hk, noi(n, c))).slice(0, 16);
+    if (hex(th) !== hex(t)) throw new Error("khoá không khớp");
+    var khoi = [];
+    for (var i = 0; i * 32 < c.length; i++) {
+      var dem = new Uint8Array([(i >>> 24) & 255, (i >>> 16) & 255, (i >>> 8) & 255, i & 255]);
+      khoi.push(sha(noi(ke, n, dem)));
+    }
+    var dong = noi.apply(null, await Promise.all(khoi)), r = new Uint8Array(c.length);
+    for (var j = 0; j < c.length; j++) r[j] = c[j] ^ dong[j];
+    return JSON.parse(new TextDecoder().decode(r));
+  }
+
+  async function tai() {
+    var ten = hex(await sha(noi(chu("ID|"), k))).slice(0, 20);
+    var q = NGUON.indexOf("http") === 0 ? "?t=" + Date.now() : "";
+    var r = await fetch(NGUON + ten + ".json" + q, { cache: "no-store" });
+    if (r.status === 404) throw new Error("CHUA_CO");
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return giaiMa(await r.json());
+  }
+
+  tai().then(hien).catch(function (e) {
+    $("luc").textContent = "";
+    if (e.message === "CHUA_CO") bao("Chưa có dữ liệu biểu đồ. Chờ khoảng 10 phút rồi quét lại.");
+    else if (/khoá/.test(e.message)) bao("QR không khớp dữ liệu. Hãy quét lại QR BIỂU ĐỒ.");
+    else bao("Không tải được dữ liệu (" + e.message + "). Kiểm tra mạng rồi tải lại trang.");
+  });
+
+  function hien(nd) {
+    var ds = nd.hs || [];
+    $("luc").textContent = "Số liệu theo báo cáo gửi tới " + gio(nd.luc) + " (báo cáo mới cần ~10 phút mới hiện)";
+    var nho = luuDoc("bieudo") || {};
+    var toChon = giai(p.to).toUpperCase();
+    if (DS_TO.indexOf(toChon) < 0) toChon = nho.to && DS_TO.indexOf(nho.to) >= 0 ? nho.to : "TẤT CẢ";
+    $("an_xong").checked = nho.an !== false;
+    var duAn = [];
+    ds.forEach(function (h) { if (h.du_an && duAn.indexOf(h.du_an) < 0) duAn.push(h.du_an); });
+    duAn.sort(soSanh);
+    var sel = $("loc_da");
+    ["TẤT CẢ DỰ ÁN"].concat(duAn).forEach(function (d, i) {
+      var o = document.createElement("option"); o.value = i ? d : ""; o.textContent = d; sel.appendChild(o);
+    });
+    if (nho.da && duAn.indexOf(nho.da) >= 0) sel.value = nho.da;
+    DS_TO.forEach(function (t) {
+      var b = document.createElement("button");
+      b.type = "button"; b.textContent = t === "TẤT CẢ" ? "TẤT CẢ TỔ" : "TỔ " + t;
+      b.onclick = function () { toChon = t; ve(); };
+      b.dataset.to = t;
+      $("loc_to").appendChild(b);
+    });
+    $("loc_to").hidden = $("hang_loc").hidden = $("chu_thich").hidden = false;
+    sel.onchange = ve;
+    $("an_xong").onchange = ve;
+    ve();
+
+    function mau(xong, can) {
+      if (!xong) return "var(--chua)";
+      if (can && xong > can) return "var(--vuot)";
+      return can && xong >= can ? "var(--xong)" : "var(--dang)";
+    }
+    function ve() {
+      Array.prototype.forEach.call($("loc_to").children, function (b) { b.classList.toggle("chon", b.dataset.to === toChon); });
+      var daChon = sel.value, an = $("an_xong").checked;
+      luuGhi("bieudo", { to: toChon, da: daChon, an: an });
+      var nhom = {}, ten = [];
+      ds.forEach(function (h) {
+        if (daChon && h.du_an !== daChon) return;
+        if (h.nhom ? toChon !== "TẤT CẢ" : (toChon !== "TẤT CẢ" && h.to !== toChon)) return;
+        if (an && h.can && h.xong >= h.can) return;
+        var d = h.du_an || "(KHÔNG RÕ DỰ ÁN)";
+        if (!nhom[d]) { nhom[d] = []; ten.push(d); }
+        nhom[d].push(h);
+      });
+      ten.sort(soSanh);
+      var khung = $("ds");
+      khung.innerHTML = "";
+      if (!ten.length) {
+        var o = document.createElement("div"); o.className = "trong";
+        o.textContent = "Không có hồ sơ nào" + (an ? " chưa xong (đã ẩn đợt xong 100%)." : ".");
+        khung.appendChild(o);
+        return;
+      }
+      ten.forEach(function (d) {
+        var hs = nhom[d].sort(function (a, b) {
+          return soSanh(a.dot, b.dot) || (THU_TU[a.to] == null ? 99 : THU_TU[a.to]) - (THU_TU[b.to] == null ? 99 : THU_TU[b.to]);
+        });
+        var can = 0, xong = 0;
+        hs.forEach(function (h) { if (!h.nhom) { can += h.can; xong += h.xong; } });
+        var the = document.createElement("div"); the.className = "da";
+        var dau = document.createElement("div"); dau.className = "da_dau";
+        var a = document.createElement("span"); a.textContent = d;
+        var b = document.createElement("span"); b.className = "pt";
+        b.textContent = can ? Math.floor(100 * xong / can) + "%" : "";
+        b.style.color = mau(xong, can);
+        dau.appendChild(a); dau.appendChild(b); the.appendChild(dau);
+        var dotCu = null;
+        hs.forEach(function (h) {
+          var r = document.createElement("div"); r.className = "dong";
+          var c1 = document.createElement("div"); c1.className = "dot"; c1.textContent = h.dot !== dotCu ? "ĐỢT " + h.dot : "";
+          dotCu = h.dot;
+          var c2 = document.createElement("div"); c2.className = "to"; c2.textContent = h.to;
+          var ray = document.createElement("div"); ray.className = "ray";
+          var pt = h.can ? Math.min(1, h.xong / h.can) : 0;
+          var ptCho = h.can ? Math.min(1 - pt, (h.cho || 0) / h.can) : 0;
+          var iDa = document.createElement("i"); iDa.style.left = "0"; iDa.style.width = 100 * pt + "%"; iDa.style.background = mau(h.xong, h.can);
+          var iCho = document.createElement("i"); iCho.className = "cho"; iCho.style.left = 100 * pt + "%"; iCho.style.width = 100 * ptCho + "%";
+          ray.appendChild(iCho); ray.appendChild(iDa);
+          var s = document.createElement("span");
+          var con = Math.max(0, h.can - h.xong);
+          s.textContent = h.nhom ? nghin(h.xong) + "/" + nghin(h.can) + " thanh"
+            : (con ? "còn " + nghin(con) + "/" + nghin(h.can) : "xong " + nghin(h.can)) + (h.cho ? " · chờ " + nghin(h.cho) : "");
+          ray.appendChild(s);
+          if (h.vuot) { var w = document.createElement("b"); w.className = "canh"; w.textContent = "!"; ray.appendChild(w); }
+          var c4 = document.createElement("div"); c4.className = "pt";
+          c4.textContent = (h.can ? Math.floor(100 * h.xong / h.can) : 0) + "%";
+          c4.style.color = mau(h.xong, h.can);
+          r.appendChild(c1); r.appendChild(c2); r.appendChild(ray); r.appendChild(c4);
+          the.appendChild(r);
+        });
+        khung.appendChild(the);
+      });
+    }
+  }
+})();
+</script>
+</body>
+</html>
