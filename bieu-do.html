@@ -11,6 +11,10 @@
   Khoá cố định = HMAC(bí mật chung, "BIEUDO|TAT CA")[:16] -> QR in 1 lần dùng mãi. Dữ liệu d/<sha256("ID|"+khoá)[:20]>.json
   (MACHINING.py --dang-trang-duyet đẩy cùng lịch 5 phút), mã hoá giống trang DUYỆT (duyet.html).
   Cách tính giống biểu đồ tab THEO DÕI HSGC: % = SL đã duyệt (chặn ở SL cần) / SL cần; phần chờ duyệt màu vàng.
+  QR DUYỆT TỔ (25/11/2026): bieu-do.html#k=<khoá biểu đồ>&to=<TỔ>&d=<khoá tổ> -> dưới biểu đồ thêm phần CHỜ DUYỆT của tổ
+  (mọi dự án A→Z / đợt). Nhập PIN tổ trưởng: Kp = PBKDF2-SHA256(PIN, muối = khoá tổ, 20000 vòng, 16 byte); dữ liệu
+  d/<sha256("ID|"+Kp)[:20]>.json mã hoá bằng Kp (sai PIN = không có file). DUYỆT -> Form NHẬN / DUYỆT HỒ SƠ điền sẵn
+    DUYETTO-<CAT|DAP|KHOAN|CNC|BG>/DUYET/<ID lớn nhất đã xem>[-<ID bỏ tick, '.' nối, a_b = dãy liền>]/<HMAC(Kp, phần trước)[:8 hex]>
 -->
 <style>
 :root{--nen:#F4F6F9;--the:#fff;--chu:#1B2A41;--phu:#5B6B80;--vien:#D5DCE6;--nhan:#C2571A;--le:#EEF2F7;--loi:#B3261E;--loi_nen:#FDECEA;
@@ -48,6 +52,45 @@ main{padding:12px 16px 40px;max-width:760px;margin:0 auto}
 .trong{background:var(--the);border:1px solid var(--vien);border-radius:10px;padding:14px;color:var(--phu)}
 .dong .to{white-space:nowrap}
 @media (max-width:380px){.dong{grid-template-columns:54px 84px 1fr 38px;padding:6px 8px}}
+/* ---- CHỜ DUYỆT của tổ (QR DUYỆT TỔ, 25/11/2026) ---- */
+#toi_duyet{display:block;width:100%;margin:0 0 12px;font:inherit;font-weight:700;font-size:14px;padding:10px;border-radius:10px;
+  border:1px solid var(--nhan);background:var(--the);color:var(--nhan);cursor:pointer}
+#cd{margin-top:22px;padding-top:14px;border-top:3px solid var(--chu)}
+#cd h2{margin:0 0 4px;font-size:18px}
+#cd .hd{font-size:12px;color:var(--phu);margin:4px 0 10px}
+.pin{background:var(--the);border:1px solid var(--vien);border-radius:10px;padding:12px}
+.pin .h{display:flex;gap:8px;margin:8px 0}
+.pin input[type=password]{flex:1;min-width:0;font:inherit;font-size:22px;letter-spacing:.3em;text-align:center;padding:8px;border-radius:8px;border:1px solid var(--vien);background:var(--nen);color:var(--chu)}
+.pin label{font-size:13px;display:flex;gap:6px;align-items:center}
+.pin label input{width:20px;height:20px;margin:0;accent-color:var(--nhan)}
+.nut{font:inherit;font-weight:700;border-radius:10px;padding:10px 14px;border:1px solid var(--vien);background:var(--the);color:var(--chu);cursor:pointer}
+.nut.chinh{background:var(--nhan);border-color:var(--nhan);color:#fff}
+.nut:disabled{opacity:.5;cursor:default}
+#cd_loi{background:var(--loi_nen);color:var(--loi);border:1px solid var(--loi);border-radius:8px;padding:10px 12px;margin:8px 0;font-weight:600}
+#cd_tb{background:#E8F5E9;color:#1B5E20;border-radius:8px;padding:10px 12px;margin:8px 0;font-size:14px}
+.cd_da{background:var(--the);border:1px solid var(--vien);border-radius:10px;margin-bottom:12px;overflow:hidden}
+.cd_da_dau{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 12px;background:#1B2A41;color:#fff;font-weight:700}
+.cd_da_dau button{font:inherit;font-size:12px;font-weight:700;border-radius:999px;padding:4px 10px;border:1px solid #fff;background:transparent;color:#fff;cursor:pointer;white-space:nowrap}
+.cd_hs{padding:6px 12px;background:var(--le);font-size:13px;font-weight:700;border-top:1px solid var(--vien)}
+.cd_hs span{font-weight:400;color:var(--phu);font-size:11px;margin-left:6px}
+.lan{border-top:1px solid var(--vien)}
+.lan.bo{opacity:.5}
+.lan .dau{display:flex;gap:10px;align-items:flex-start;padding:8px 12px;cursor:pointer}
+.lan .dau input{width:24px;height:24px;flex:none;accent-color:var(--xong);margin:0}
+.lan .ten{font-weight:700;font-size:14px}
+.lan .phu{font-size:12px;color:var(--phu)}
+.lan .canh_bao{background:var(--loi_nen);color:var(--loi);font-size:12px;font-weight:600;padding:5px 12px}
+.lan .ghi{font-size:12px;color:var(--phu);padding:0 12px 6px}
+.lan table{width:100%;border-collapse:collapse;font-size:13px}
+.lan th{font-size:11px;text-align:center;padding:4px 3px;border-top:1px solid var(--vien);color:var(--phu)}
+.lan td{padding:4px 3px;text-align:center;border-top:1px solid var(--vien)}
+.lan td.mgc{text-align:left;font-weight:700;word-break:break-all;padding-left:12px}
+.lan td.bao{font-weight:700}
+.lan td.vuot{color:var(--loi)}
+#cd_chan{position:sticky;bottom:0;background:var(--nen);padding:10px 0 12px;border-top:1px solid var(--vien)}
+#cd_chan .nut.chinh{width:100%;font-size:16px;padding:14px}
+#cd_chan .hang2{display:flex;gap:8px;margin-bottom:8px}
+#cd_chan .hang2 .nut{flex:1;font-size:13px;padding:8px}
 </style>
 </head>
 <body>
@@ -58,6 +101,7 @@ main{padding:12px 16px 40px;max-width:760px;margin:0 auto}
 </header>
 <main>
   <div id="loi" hidden></div>
+  <button type="button" id="toi_duyet" hidden></button>
   <div class="loc" id="loc_to" hidden></div>
   <div class="hang" id="hang_loc" hidden>
     <select id="loc_da"></select>
@@ -70,6 +114,29 @@ main{padding:12px 16px 40px;max-width:760px;margin:0 auto}
     <span style="--mau:var(--ray)">Chưa làm</span>
   </div>
   <div id="ds"></div>
+  <section id="cd" hidden>
+    <h2 id="cd_tieu">CHỜ DUYỆT</h2>
+    <div class="hd" id="cd_luc"></div>
+    <div class="pin" id="cd_pin">
+      <b>Nhập PIN tổ trưởng để xem và duyệt</b>
+      <div class="h">
+        <input type="password" id="cd_ma" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" placeholder="PIN">
+        <button type="button" class="nut chinh" id="cd_mo">MỞ</button>
+      </div>
+      <label><input type="checkbox" id="cd_nho"> Nhớ PIN trên điện thoại này</label>
+    </div>
+    <div id="cd_loi" hidden></div>
+    <div id="cd_tb" hidden></div>
+    <div id="cd_ds"></div>
+    <div id="cd_chan" hidden>
+      <div class="hang2">
+        <button type="button" class="nut" id="cd_chon_het">CHỌN HẾT</button>
+        <button type="button" class="nut" id="cd_bo_het">BỎ HẾT</button>
+        <button type="button" class="nut" id="cd_khoa">KHOÁ (QUÊN PIN)</button>
+      </div>
+      <button type="button" class="nut chinh" id="cd_duyet">DUYỆT</button>
+    </div>
+  </section>
 </main>
 <script>
 (function () {
@@ -117,7 +184,7 @@ main{padding:12px 16px 40px;max-width:760px;margin:0 auto}
   if (k.length !== 16) { $("luc").textContent = ""; bao("Link không đúng. Hãy quét lại QR BIỂU ĐỒ."); return; }
   if (!window.crypto || !crypto.subtle) { $("luc").textContent = ""; bao("Trình duyệt này không mở được dữ liệu. Hãy mở bằng Chrome / Safari."); return; }
 
-  async function giaiMa(f) {
+  async function giaiMa(f, k) {
     var ke = await sha(noi(chu("ENC|"), k)), km = await sha(noi(chu("MAC|"), k));
     var n = b64(f.n), c = b64(f.c), t = b64(f.t);
     var hk = await crypto.subtle.importKey("raw", km, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
@@ -133,16 +200,22 @@ main{padding:12px 16px 40px;max-width:760px;margin:0 auto}
     return JSON.parse(new TextDecoder().decode(r));
   }
 
-  async function tai() {
+  async function tai(k) {
     var ten = hex(await sha(noi(chu("ID|"), k))).slice(0, 20);
     var q = NGUON.indexOf("http") === 0 ? "?t=" + Date.now() : "";
     var r = await fetch(NGUON + ten + ".json" + q, { cache: "no-store" });
     if (r.status === 404) throw new Error("CHUA_CO");
     if (!r.ok) throw new Error("HTTP " + r.status);
-    return giaiMa(await r.json());
+    return giaiMa(await r.json(), k);
   }
 
-  tai().then(hien).catch(function (e) {
+  // ---- QR DUYỆT TỔ: &to=<TỔ>&d=<khoá tổ> ----
+  var MA_TO = { "CẮT": "CAT", "DẬP": "DAP", "KHOAN": "KHOAN", "CNC": "CNC", "BG": "BG" };
+  var toQr = giai(p.to).toUpperCase(), kTo = null;
+  try { if (p.d) kTo = b64(p.d); } catch (e) { kTo = null; }
+  if (!kTo || kTo.length !== 16 || !MA_TO[toQr]) kTo = null;
+
+  tai(k).then(hien).catch(function (e) {
     $("luc").textContent = "";
     if (e.message === "CHUA_CO") bao("Chưa có dữ liệu biểu đồ. Chờ khoảng 10 phút rồi quét lại.");
     else if (/khoá/.test(e.message)) bao("QR không khớp dữ liệu. Hãy quét lại QR BIỂU ĐỒ.");
@@ -175,6 +248,7 @@ main{padding:12px 16px 40px;max-width:760px;margin:0 auto}
     sel.onchange = ve;
     $("an_xong").onchange = ve;
     ve();
+    if (kTo) khoiDuyet(ds);
 
     function mau(xong, can) {
       if (!xong) return "var(--chua)";
@@ -243,6 +317,187 @@ main{padding:12px 16px 40px;max-width:760px;margin:0 auto}
         });
         khung.appendChild(the);
       });
+    }
+  }
+
+  // ======== PHẦN CHỜ DUYỆT CỦA TỔ (QR DUYỆT TỔ + PIN) ========
+  function cdBao(t) { var e = $("cd_loi"); e.textContent = t; e.hidden = !t; }
+  function soHien(v) { return v == null ? "" : String(v); }
+  async function khoaPin(pin) {
+    var kk = await crypto.subtle.importKey("raw", chu(pin), "PBKDF2", false, ["deriveBits"]);
+    var b = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: kTo, iterations: 20000, hash: "SHA-256" }, kk, 128);
+    return new Uint8Array(b);
+  }
+  async function kyTen(kp, t) {
+    var hk = await crypto.subtle.importKey("raw", kp, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+    return hex(new Uint8Array(await crypto.subtle.sign("HMAC", hk, chu(t)))).slice(0, 8);
+  }
+  function gonDs(ds) {                        // [12,15,16,17,18,20] -> "12.15_18.20"
+    ds = ds.map(Number).sort(function (a, b) { return a - b; });
+    var out = [], i = 0;
+    while (i < ds.length) {
+      var j = i;
+      while (j + 1 < ds.length && ds[j + 1] === ds[j] + 1) j++;
+      out.push(j - i >= 2 ? ds[i] + "_" + ds[j] : ds.slice(i, j + 1).join("."));
+      i = j + 1;
+    }
+    return out.join(".");
+  }
+
+  function khoiDuyet(dsBd) {
+    var maTo = MA_TO[toQr], khoaNho = "pin:" + maTo, daNho = "duyetto:" + maTo;
+    var soHs = dsBd.filter(function (h) { return !h.nhom && h.to === toQr && h.cho > 0; }).length;
+    $("cd").hidden = false;
+    $("cd_tieu").textContent = "CHỜ DUYỆT · TỔ " + toQr;
+    $("toi_duyet").hidden = false;
+    $("toi_duyet").textContent = "↓ CHỜ DUYỆT TỔ " + toQr + (soHs ? " · " + soHs + " đợt có báo cáo chờ" : "");
+    $("toi_duyet").onclick = function () { $("cd").scrollIntoView({ behavior: "smooth" }); };
+    document.title = "Tổ " + toQr + " · biểu đồ / duyệt";
+
+    var cu = luuDoc(daNho);
+    if (cu && cu.luc && Date.now() - cu.luc < 30 * 60000) {
+      $("cd_tb").textContent = "Máy này đã mở Form duyệt lúc " +
+        new Date(cu.luc).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }) +
+        ". Báo cáo đã duyệt sẽ biến khỏi danh sách sau khoảng 10 phút (nếu đã bấm Gửi trên Form).";
+      $("cd_tb").hidden = false;
+    }
+    var pinNho = luuDoc(khoaNho);
+    if (pinNho) { $("cd_ma").value = pinNho; $("cd_nho").checked = true; mo(true); }
+    $("cd_mo").onclick = function () { mo(false); };
+    $("cd_ma").onkeydown = function (e) { if (e.key === "Enter") mo(false); };
+    $("cd_khoa").onclick = function () {
+      luuGhi(khoaNho, null);
+      $("cd_ma").value = ""; $("cd_nho").checked = false;
+      $("cd_ds").innerHTML = ""; $("cd_chan").hidden = true; $("cd_pin").hidden = false; $("cd_luc").textContent = "";
+    };
+
+    async function mo(tuDong) {
+      cdBao("");
+      var pin = $("cd_ma").value.trim();
+      if (!/^\d{4,8}$/.test(pin)) { if (!tuDong) cdBao("PIN gồm 4–8 chữ số."); return; }
+      $("cd_mo").disabled = true; $("cd_mo").textContent = "…";
+      try {
+        var kp = await khoaPin(pin);
+        var nd = await tai(kp);
+        luuGhi(khoaNho, $("cd_nho").checked ? pin : null);
+        $("cd_pin").hidden = true;
+        veDs(nd, kp);
+      } catch (e) {
+        if (e.message === "CHUA_CO")
+          cdBao("PIN không đúng" + (tuDong ? " (PIN đã nhớ trên máy này không còn dùng được)" : "") +
+            ". Nếu tổ vừa đặt / đổi PIN thì chờ khoảng 10 phút rồi thử lại.");
+        else if (/khoá/.test(e.message)) cdBao("PIN không khớp dữ liệu.");
+        else cdBao("Không tải được danh sách (" + e.message + "). Kiểm tra mạng rồi thử lại.");
+        if (tuDong) luuGhi(khoaNho, null);
+      } finally {
+        $("cd_mo").disabled = false; $("cd_mo").textContent = "MỞ";
+      }
+    }
+
+    function veDs(nd, kp) {
+      var khung = $("cd_ds"), tatCa = [];
+      khung.innerHTML = "";
+      $("cd_luc").textContent = "Danh sách có các báo cáo gửi tới " + gio(nd.luc) + ". Báo cáo gửi sau đó cần ~10 phút mới hiện.";
+      var hs = nd.hs || [];
+      if (!hs.length) {
+        var o = document.createElement("div"); o.className = "trong"; o.textContent = "Không có báo cáo nào chờ duyệt.";
+        khung.appendChild(o); $("cd_chan").hidden = true; return;
+      }
+      if (!nd.form || nd.form.indexOf("=MAHS") < 0) { cdBao("Chưa có Form DUYỆT. Báo người quản lý."); return; }
+      var theoDa = [], nhomDa = {};
+      hs.forEach(function (h) {
+        var d = h.du_an || "(KHÔNG RÕ DỰ ÁN)";
+        if (!nhomDa[d]) { nhomDa[d] = []; theoDa.push(d); }
+        nhomDa[d].push(h);
+      });
+      theoDa.sort(soSanh);
+      theoDa.forEach(function (d) {
+        var the = document.createElement("div"); the.className = "cd_da";
+        var dau = document.createElement("div"); dau.className = "cd_da_dau";
+        var lanDa = [];
+        var ten = document.createElement("span");
+        var nutDa = document.createElement("button"); nutDa.type = "button";
+        dau.appendChild(ten); dau.appendChild(nutDa); the.appendChild(dau);
+        nhomDa[d].sort(function (a, b) { return soSanh(a.dot, b.dot); }).forEach(function (h) {
+          var dh = document.createElement("div"); dh.className = "cd_hs";
+          dh.textContent = "ĐỢT " + h.dot;
+          var sp = document.createElement("span"); sp.textContent = h.ma + (h.to && h.to !== toQr ? " · hồ sơ tổ " + h.to : "");
+          dh.appendChild(sp); the.appendChild(dh);
+          (h.cho || []).forEach(function (l) { the.appendChild(veLan(l)); lanDa.push(l); tatCa.push(l); });
+        });
+        ten.textContent = d + " · " + lanDa.length + " lần";
+        nutDa.textContent = "BỎ CẢ DỰ ÁN";
+        nutDa.onclick = function () {
+          var bat = !lanDa.some(function (l) { return l.tick.checked; });
+          lanDa.forEach(function (l) { if (!l.tick.disabled) l.tick.checked = bat; });
+          dem();
+        };
+        the.nutDa = nutDa; the.lanDa = lanDa;
+        khung.appendChild(the);
+      });
+      $("cd_chan").hidden = false;
+      dem();
+
+      function veLan(l) {
+        var o = document.createElement("div"), cb = [];
+        o.className = "lan";
+        var dau = document.createElement("label"); dau.className = "dau";
+        var tick = document.createElement("input"); tick.type = "checkbox";
+        tick.checked = /^\d+$/.test(l.id); tick.disabled = !/^\d+$/.test(l.id);
+        var pf = [];
+        l.ds.forEach(function (x) { if (x.pf && pf.indexOf(x.pf) < 0) pf.push(x.pf); if (x.cb && cb.indexOf(x.cb) < 0) cb.push(x.cb); });
+        var ch = document.createElement("div");
+        var a = document.createElement("div"); a.className = "ten"; a.textContent = (l.tho || "(không tên)") + " · " + gio(l.luc);
+        var b = document.createElement("div"); b.className = "phu"; b.textContent = (pf.join(", ") || "—") + " · ID " + l.id;
+        ch.appendChild(a); ch.appendChild(b); dau.appendChild(tick); dau.appendChild(ch); o.appendChild(dau);
+        if (tick.disabled) cb.push("Báo cáo không có ID số - không duyệt qua QR được");
+        if (cb.length) { var c = document.createElement("div"); c.className = "canh_bao"; c.textContent = "⚠ " + cb.join(" · "); o.appendChild(c); }
+        if (l.ghi) { var g = document.createElement("div"); g.className = "ghi"; g.textContent = "Ghi chú: " + l.ghi; o.appendChild(g); }
+        var tb = document.createElement("table");
+        tb.innerHTML = "<thead><tr><th style='text-align:left;padding-left:12px'>MÃ</th><th>KT</th><th>SL<br>BÁO</th><th>CẦN</th><th>ĐÃ<br>DUYỆT</th></tr></thead>";
+        var bd = document.createElement("tbody");
+        l.ds.forEach(function (x) {
+          var tr = document.createElement("tr");
+          tr.innerHTML = "<td class='mgc'></td><td></td><td class='bao'></td><td></td><td></td>";
+          tr.children[0].textContent = x.gc || x.pf || "?";
+          tr.children[1].textContent = x.kt;
+          tr.children[2].textContent = soHien(x.bao);
+          if (x.can != null && x.bao != null && (x.da || 0) + x.bao > x.can) tr.children[2].classList.add("vuot");
+          tr.children[3].textContent = soHien(x.can);
+          tr.children[4].textContent = soHien(x.da);
+          bd.appendChild(tr);
+        });
+        tb.appendChild(bd); o.appendChild(tb);
+        l.tick = tick; l.o = o;
+        tick.addEventListener("change", dem);
+        return o;
+      }
+
+      function dem() {
+        var n = 0;
+        tatCa.forEach(function (l) { l.o.classList.toggle("bo", !l.tick.checked); if (l.tick.checked) n++; });
+        Array.prototype.forEach.call(khung.children, function (t) {
+          if (t.nutDa) t.nutDa.textContent = t.lanDa.some(function (l) { return l.tick.checked; }) ? "BỎ CẢ DỰ ÁN" : "CHỌN CẢ DỰ ÁN";
+        });
+        $("cd_duyet").textContent = n ? "DUYỆT " + n + " LẦN BÁO CÁO ĐÃ CHỌN → MỞ FORM" : "CHƯA CHỌN BÁO CÁO NÀO";
+        $("cd_duyet").disabled = !n;
+      }
+      $("cd_chon_het").onclick = function () { tatCa.forEach(function (l) { if (!l.tick.disabled) l.tick.checked = true; }); dem(); };
+      $("cd_bo_het").onclick = function () { tatCa.forEach(function (l) { l.tick.checked = false; }); dem(); };
+      $("cd_duyet").onclick = async function () {
+        cdBao("");
+        var so = tatCa.filter(function (l) { return /^\d+$/.test(l.id); });
+        var chon = so.filter(function (l) { return l.tick.checked; });
+        if (!chon.length) { cdBao("Chưa chọn báo cáo nào."); return; }
+        var max = Math.max.apply(null, so.map(function (l) { return parseInt(l.id, 10); }));
+        var tru = so.filter(function (l) { return !l.tick.checked; }).map(function (l) { return l.id; });
+        var ma = "DUYETTO-" + maTo + "/DUYET/" + max + (tru.length ? "-" + gonDs(tru) : "");
+        ma += "/" + await kyTen(kp, ma);
+        if (!confirm("Duyệt " + chon.length + " lần báo cáo của tổ " + toQr +
+          (tru.length ? " (để lại " + tru.length + " lần chưa duyệt)" : "") + "?")) return;
+        luuGhi(daNho, { luc: Date.now(), ma: ma });
+        location.href = nd.form.replace("=MAHS", "=" + encodeURIComponent(ma));
+      };
     }
   }
 })();
