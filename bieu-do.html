@@ -14,7 +14,7 @@
   QR DUYỆT TỔ (25/11/2026): bieu-do.html#k=<khoá biểu đồ>&to=<TỔ>&d=<khoá tổ> -> dưới biểu đồ thêm phần CHỜ DUYỆT của tổ
   (mọi dự án A→Z / đợt). Nhập PIN tổ trưởng: Kp = PBKDF2-SHA256(PIN, muối = khoá tổ, 20000 vòng, 16 byte); dữ liệu
   d/<sha256("ID|"+Kp)[:20]>.json mã hoá bằng Kp (sai PIN = không có file). DUYỆT -> Form NHẬN / DUYỆT HỒ SƠ điền sẵn
-    DUYETTO-<CAT|DAP|KHOAN|CNC|BG>/DUYET/<ID lớn nhất đã xem>[-<ID bỏ tick, '.' nối, a_b = dãy liền>]/<HMAC(Kp, phần trước)[:8 hex]>
+    [<MÃ NHÀ MÁY>-]DUYETTO-<CAT|DAP|KHOAN|CNC|BG>/DUYET/<ID lớn nhất đã xem>[-<ID bỏ tick, '.' nối, a_b = dãy liền>]/<HMAC(Kp, phần trước)[:8 hex]>
 -->
 <style>
 :root{--nen:#F4F6F9;--the:#fff;--chu:#1B2A41;--phu:#5B6B80;--vien:#D5DCE6;--nhan:#C2571A;--le:#EEF2F7;--loi:#B3261E;--loi_nen:#FDECEA;
@@ -491,7 +491,8 @@ main{padding:12px 16px 40px;max-width:760px;margin:0 auto}
         if (!chon.length) { cdBao("Chưa chọn báo cáo nào."); return; }
         var max = Math.max.apply(null, so.map(function (l) { return parseInt(l.id, 10); }));
         var tru = so.filter(function (l) { return !l.tick.checked; }).map(function (l) { return l.id; });
-        var ma = "DUYETTO-" + maTo + "/DUYET/" + max + (tru.length ? "-" + gonDs(tru) : "");
+        // nd.nm = tiền tố mã nhà máy (vd "NMBD-"; NMCD rỗng), có từ 26/11/2026
+        var ma = (nd.nm || "") + "DUYETTO-" + maTo + "/DUYET/" + max + (tru.length ? "-" + gonDs(tru) : "");
         ma += "/" + await kyTen(kp, ma);
         if (!confirm("Duyệt " + chon.length + " lần báo cáo của tổ " + toQr +
           (tru.length ? " (để lại " + tru.length + " lần chưa duyệt)" : "") + "?")) return;
